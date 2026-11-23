@@ -11,7 +11,7 @@ set -euo pipefail
 
 : "${LLVM_VERSION:?}" "${SOURCE_DATE_EPOCH:?}" "${DISTRO:?}" "${DISTRO_NAME:?}" "${ARCH:?}" "${BASE_IMAGE:?}"
 JOBS=${JOBS:-$(nproc)}
-TARGETS=${TARGETS:-all}
+TARGETS=${TARGETS:-Native}
 PROJECTS=${PROJECTS:-clang;lld}
 RUNTIMES="compiler-rt;libcxx;libcxxabi;libunwind"
 LTO=${LTO:-Thin}

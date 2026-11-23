@@ -9,7 +9,9 @@ set(CMAKE_BUILD_TYPE Release CACHE STRING "")
 
 set(LLVM_ENABLE_PROJECTS "clang;lld" CACHE STRING "")
 set(LLVM_ENABLE_RUNTIMES "compiler-rt;libcxx;libcxxabi;libunwind" CACHE STRING "")
-set(LLVM_TARGETS_TO_BUILD "all" CACHE STRING "")
+# Only the host's backend; build.sh passes it by name (X86, AArch64) or the
+# list given in TARGETS.
+set(LLVM_TARGETS_TO_BUILD "Native" CACHE STRING "")
 # ThinLTO (with the PGO profile) for the compiler and tools, like the official
 # LLVM releases. It does not reach the runtimes: they are a separate CMake
 # build, so libc++.a, the sanitizer runtimes etc. stay plain ELF objects

@@ -5,7 +5,7 @@ Reproducible builds of a current LLVM toolchain that runs on **Debian 10
 
 | Component   | What you get |
 |-------------|--------------|
-| clang 23.1.6 | C/C++/Objective-C compiler (all LLVM targets), `clang-format`, `clang-scan-deps`, `clang-repl`, scan-build, `libclang` |
+| clang 23.1.6 | C/C++/Objective-C compiler (x86-64 backend; others with `TARGETS`), `clang-format`, `clang-scan-deps`, `clang-repl`, scan-build, `libclang` |
 | lld         | `ld.lld`, `wasm-ld`, `lld-link`, `ld64.lld`; LTO / ThinLTO |
 | compiler-rt | builtins, crt, **ASan, UBSan, TSan, MSan, LSan, HWASan, DFSan, NSan, RTSan, TySan, SafeStack, CFI, Scudo, GWP-ASan, MemProf**, libFuzzer, XRay, profile/coverage runtime |
 | libc++      | libc++, libc++abi, libunwind (shared and static), the `std` C++ module |
@@ -14,9 +14,11 @@ Reproducible builds of a current LLVM toolchain that runs on **Debian 10
 The official LLVM release binaries are built on recent Ubuntu and need a
 newer glibc than Debian 10 has. This repository builds the toolchain inside a
 Debian 10 container instead, from pinned and verified inputs, so that anyone
-can rebuild it and get bit-for-bit the same tarball. Like the official
-releases, the compiler is optimised with profile-guided optimisation (PGO)
-and ThinLTO.
+can rebuild it. Like the official releases, the compiler is optimised with
+profile-guided optimisation (PGO) and ThinLTO. Rebuilds on the same machine
+give bit-for-bit the same tarball; on another machine the PGO profile, and
+with it the compiler binaries, come out slightly different (see
+[Reproducibility](#reproducibility)).
 
 ## Using a prebuilt package
 
@@ -99,10 +101,12 @@ produces an x86-64 toolchain.
 
 This fetches and verifies the sources, builds the builder image, builds the
 toolchain, packages it and runs the smoke tests. On a 28-thread machine a
-clean build takes about 40 minutes (stage 1 ~8, PGO ~10, stage 2 ~19,
-packaging ~4; with `LTO=OFF` stage 2 takes ~6); on a 4-vCPU GitHub runner it
-is several hours. The build tree needs about 26 GB; the package is ~610 MB
-(3.3 GB unpacked). Results land in `out/`:
+clean build takes about 35 minutes (stage 1 ~8, PGO ~10, stage 2 ~14,
+packaging ~2; `LTO=OFF` makes stage 2 about three times shorter,
+`TARGETS=all` about a third longer); on a 4-vCPU GitHub runner it takes about
+5.5 hours (stage 1 70 minutes, PGO 55 minutes, stage 2 with packaging 3.2
+hours, measured with `TARGETS=all`). The build tree needs about 20 GB; the package is ~300 MB (1.6 GB
+unpacked; ~610 MB and 3.3 GB with `TARGETS=all`). Results land in `out/`:
 
 ```
 out/llvm-23.1.6-x86_64-debian10.tar.xz          the toolchain
@@ -131,7 +135,7 @@ Settings are environment variables:
 |----------|---------|---------|
 | `DISTRO` | `buster` | Debian release to build on: `buster`, `bullseye`, `bookworm`, `trixie`. The result runs on that release and newer ones. |
 | `JOBS` | `nproc` | parallel jobs |
-| `TARGETS` | `all` | `LLVM_TARGETS_TO_BUILD` of the final compiler, e.g. `X86;AArch64` for a faster build |
+| `TARGETS` | host backend (`X86` or `AArch64`) | `LLVM_TARGETS_TO_BUILD` of the final compiler. The default generates code for the host only; add backends to cross-compile, e.g. `X86;AArch64;RISCV`, or `all` (20 backends, as in the official releases). The runtimes are built for the host either way, so cross-compiling also needs a sysroot of the target. |
 | `PROJECTS` | `clang;lld` | e.g. `clang;lld;clang-tools-extra` to add clangd and clang-tidy |
 | `PGO` | `ON` | `OFF` skips the instrumented build and training (faster build, slower compiler) |
 | `LTO` | `Thin` | LTO of the compiler and tools: `Thin`, `Full` (much slower to build, needs a lot of RAM) or `OFF` (stage 2 about three times faster to build, slightly slower compiler). The runtimes are never built with LTO. |
@@ -187,8 +191,9 @@ PGO training set, with three builds of the same configuration:
 
 PGO does most of the work; ThinLTO adds 2–3 % on top, at the price of a
 three times longer stage 2 and ~7 % larger binaries. The instrumented build
-is host-target only, so code of the other backends has no profile and is
-optimised as usual rather than treated as cold.
+has only the host backend, so with more `TARGETS` the code of the other
+backends has no profile and is optimised as usual rather than treated as
+cold.
 
 ### Reproducibility
 
@@ -217,6 +222,15 @@ profile. Disabling ASLR needs the
 `personality` syscall, which Docker's default seccomp profile blocks, so
 the build container runs with `--security-opt seccomp=unconfined`.
 
+This makes the profile repeatable on one machine, but not across machines.
+Even with ASLR disabled, heap addresses depend on things outside the
+container (most likely on how the kernel places memory mappings). A profile
+collected on a GitHub Actions runner differed from a local one in about
+3,000 of 180,000 functions, all of them hash tables and sets keyed by
+pointers (`DenseMap`, `FoldingSet`, `SmallPtrSet`); the counts overlap by
+99.991 %. The profile only changes how the compiler itself is optimised,
+not the code it generates.
+
 Incremental rebuilds give the same result as clean ones: whenever a build
 tree's CMake cache script (`cmake/*.cmake`) or CMake arguments change, or the
 compiler that builds it changes (new stage 1, new builder image, new PGO
@@ -236,18 +250,33 @@ owner `0:0` and every timestamp set to `SOURCE_DATE_EPOCH` (the LLVM release
 date, from `config/versions.env`), compressed by `xz` with a fixed thread
 count.
 
-This has been verified: a complete build from empty build trees
-(`JOBS=28`) and a clean stage 2 in another directory, run at the same time
-(`JOBS=12`), produced the same `llvm-23.1.6-x86_64-debian10.tar.xz`, byte
-for byte; stage 1 and the PGO profile also came out identical to those of
-earlier builds.
+This has been verified on one machine. With `TARGETS=all`, a complete build
+from empty build trees (`JOBS=28`) and a clean stage 2 in another directory,
+run at the same time (`JOBS=12`), produced the same
+`llvm-23.1.6-x86_64-debian10.tar.xz`, byte for byte. With the default
+`TARGETS`, a rebuilt stage 2 in the main tree (`JOBS=28`) and the PGO
+training plus stage 2 from scratch in another directory (`JOBS=20`) did too.
+Stage 1 and the PGO profile came out identical in every build.
 
-To check a release, build the same tag and compare checksums:
+Across machines it was compared with a build on a GitHub Actions runner (4
+vCPUs, a different CPU and kernel; `TARGETS=all`). Stage 1 was identical,
+file for file; the PGO profile was not (see above). The two packages had
+the same 2,380 files, and 2,310 of them were identical byte for byte: the
+runtimes (libc++, compiler-rt and the sanitizers, libunwind), the headers,
+the scripts. The 70 that differ are the executables and shared libraries
+optimised with the profile (clang, lld, the LLVM tools, `libclang.so`,
+`libLTO.so`) and `BUILD-INFO.txt`, which records the profile checksum.
+
+To check a release, build the same tag and compare the unpacked trees. On
+another machine expect differences only in those compiler binaries:
 
 ```bash
 git checkout v23.1.6-1
 ./build.sh fetch image build
-sha256sum out/*.tar.xz      # compare with the .sha256 file of the release
+mkdir release local
+tar -C release -xJf llvm-23.1.6-x86_64-debian10.tar.xz   # downloaded from the release
+tar -C local -xJf out/llvm-23.1.6-x86_64-debian10.tar.xz
+diff -r release local
 ```
 
 ### Updating LLVM
@@ -277,8 +306,9 @@ jobs to stay under the 6-hour job limit; the package is then tested on
 Debian 10–13.
 
 * **Run workflow** (manual): choose the Debian release, architecture,
-  targets and LTO (`OFF` if a ThinLTO stage 2 does not fit into the time
-  limit).
+  targets (empty: the host backend only) and LTO. With `TARGETS=all` and
+  ThinLTO, stage 2 takes about 3.2 of the 6 hours a job may run; `LTO=OFF`
+  is the fallback if it ever stops fitting.
 * **Push a tag** `v<llvm version>-<n>`, e.g. `v23.1.6-1`: builds the Debian 10
   x86-64 package and publishes it as a GitHub release.
 

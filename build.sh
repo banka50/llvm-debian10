@@ -10,7 +10,13 @@ source "$REPO/config/versions.env"
 DISTRO=${DISTRO:-buster}
 ARCH=${ARCH:-$(uname -m)}
 JOBS=${JOBS:-$(nproc)}
-TARGETS=${TARGETS:-all}
+# Only the host's backend by default (the runtimes are built for the host
+# only anyway); e.g. TARGETS="X86;AArch64" or TARGETS=all for cross-compiling.
+case $ARCH in
+    x86_64) TARGETS=${TARGETS:-X86} ;;
+    aarch64) TARGETS=${TARGETS:-AArch64} ;;
+    *) TARGETS=${TARGETS:-Native} ;;
+esac
 PROJECTS=${PROJECTS:-clang;lld}
 PGO=${PGO:-ON}
 LTO=${LTO:-Thin}

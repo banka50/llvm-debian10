@@ -21,9 +21,9 @@ on:
         options: [x86_64, aarch64]
         default: x86_64
       targets:
-        description: LLVM_TARGETS_TO_BUILD of the final compiler
+        description: LLVM_TARGETS_TO_BUILD of the final compiler (empty for the host backend only; e.g. X86;AArch64 or all)
         type: string
-        default: all
+        default: ''
       lto:
         description: LTO of the final compiler (OFF builds stage 2 about three times as fast)
         type: choice
@@ -40,7 +40,7 @@ concurrency:
 env:
   DISTRO: ${{ inputs.distro || 'buster' }}
   ARCH: ${{ inputs.arch || 'x86_64' }}
-  TARGETS: ${{ inputs.targets || 'all' }}
+  TARGETS: ${{ inputs.targets }}
   LTO: ${{ inputs.lto || 'Thin' }}
 
 jobs:
