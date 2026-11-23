@@ -1,0 +1,10 @@
+# Every external input of the build, pinned by SHA-256.
+# Format: <file name> <sha256> <url>
+# scripts/fetch-sources.sh downloads these into sources/ and verifies them.
+llvm-project-23.1.6.src.tar.xz d3b86ab29cfb4445a6652e5c2642ccc75e04e38084dde3701d323320f35a31da https://github.com/llvm/llvm-project/releases/download/llvmorg-23.1.6/llvm-project-23.1.6.src.tar.xz
+llvm-project-23.1.6.src.tar.xz.sig 08b4a9ccba92e82e50b9efaf4f1c832d071b708e073308d6d72472e879366d80 https://github.com/llvm/llvm-project/releases/download/llvmorg-23.1.6/llvm-project-23.1.6.src.tar.xz.sig
+cmake-4.5.1-linux-x86_64.tar.gz 83b71181fb62b4fe8f26067a9321448572e7a43bd04ff6c7f54a24c33698f16d https://github.com/Kitware/CMake/releases/download/v4.5.1/cmake-4.5.1-linux-x86_64.tar.gz
+cmake-4.5.1-linux-aarch64.tar.gz 3bec208f11ed96c173032eeaf97937c54dd246acefee22acd7794a6b4e70d536 https://github.com/Kitware/CMake/releases/download/v4.5.1/cmake-4.5.1-linux-aarch64.tar.gz
+ninja-1.13.2.tar.gz 974d6b2f4eeefa25625d34da3cb36bdcebe7fbce40f4c16ac0835fd1c0cbae17 https://github.com/ninja-build/ninja/archive/refs/tags/v1.13.2.tar.gz
+zstd-1.5.7.tar.gz eb33e51f49a15e023950cd7825ca74a4a2b43db8354825ac24fc1b7ee09e6fa3 https://github.com/facebook/zstd/releases/download/v1.5.7/zstd-1.5.7.tar.gz
+Python-3.12.16.tar.xz b5796915dc45ff745cfb4e990a7e7c93d6f546328a102ce31448d69ebc37575c https://www.python.org/ftp/python/3.12.16/Python-3.12.16.tar.xz

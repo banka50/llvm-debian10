@@ -1,0 +1,4 @@
+# buster is archived, archive.debian.org no longer changes -> package set is frozen.
+deb http://archive.debian.org/debian buster main
+deb http://archive.debian.org/debian buster-updates main
+deb http://archive.debian.org/debian-security buster/updates main

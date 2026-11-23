@@ -1,0 +1,4 @@
+# Pinned snapshot matching the base image date.
+deb http://snapshot.debian.org/archive/debian/20261104T000000Z bookworm main
+deb http://snapshot.debian.org/archive/debian/20261104T000000Z bookworm-updates main
+deb http://snapshot.debian.org/archive/debian-security/20261104T000000Z bookworm-security main

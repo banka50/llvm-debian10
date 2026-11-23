@@ -1,0 +1,9 @@
+# The image only needs the distro configs, the install script and the pinned
+# tool tarballs. The LLVM source is mounted at build time, not copied.
+*
+!docker/install-tools.sh
+!distros/
+!sources/cmake-*
+!sources/ninja-*
+!sources/zstd-*
+!sources/Python-*
